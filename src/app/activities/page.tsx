@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { Activity } from '@/lib/types'
 import { getActivities, addActivity, removeActivity } from '@/lib/storage'
+import { LiquidGlass } from '@/components/ui/liquid-glass'
 
 export default function ActivitiesPage() {
   const [activities, setActivities] = useState<Activity[]>([])
@@ -30,19 +31,23 @@ export default function ActivitiesPage() {
       <h1 className="text-3xl font-bold mb-6">Activities</h1>
 
       <form onSubmit={handleAdd} className="flex gap-2 mb-6">
-        <input
-          type="text"
-          value={newActivity}
-          onChange={(e) => setNewActivity(e.target.value)}
-          placeholder="New activity name"
-          className="flex-1 px-3 py-2 border border-gray-300 rounded"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Add
-        </button>
+        <LiquidGlass compact className="rounded-xl flex-1">
+          <input
+            type="text"
+            value={newActivity}
+            onChange={(e) => setNewActivity(e.target.value)}
+            placeholder="New activity name"
+            className="w-full px-3 py-2 bg-transparent border-0 border-transparent rounded text-white placeholder-gray-400 focus:ring-1 focus:ring-white/30 focus:outline-none"
+          />
+        </LiquidGlass>
+        <LiquidGlass compact className="rounded-xl">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-transparent text-white rounded hover:bg-white/10 transition-colors shadow-none"
+          >
+            Add
+          </button>
+        </LiquidGlass>
       </form>
 
       {activities.length === 0 ? (

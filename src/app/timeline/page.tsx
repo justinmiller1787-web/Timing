@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { RippleButton } from '@/components/ui/ripple-button'
 
 interface Entry {
   id: string
@@ -310,7 +311,7 @@ export default function TimelinePage() {
   if (entries.length === 0) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Timeline</h1>
+        <h1 className="text-3xl font-bold mb-6 text-blue-600">Timeline</h1>
         <p className="text-gray-500">No activities logged yet.</p>
       </div>
     )
@@ -319,59 +320,55 @@ export default function TimelinePage() {
   if (filteredEntries.length === 0) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-4">Timeline</h1>
+        <h1 className="text-3xl font-bold mb-4 text-blue-600">Timeline</h1>
 
         <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-2">
-            <button
-              type="button"
+          <div className="flex border border-blue-900 rounded-lg overflow-hidden">
+            <RippleButton
+              rippleColor="rgba(255,255,255,0.6)"
               onClick={() => setViewMode('day')}
-              className={`px-3 py-1 rounded border text-sm ${
-                viewMode === 'day' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'
+              className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+                viewMode === 'day' ? 'text-white' : 'text-blue-300'
               }`}
             >
               Day
-            </button>
-            <button
-              type="button"
+            </RippleButton>
+            <RippleButton
+              rippleColor="rgba(255,255,255,0.6)"
               onClick={() => setViewMode('week')}
-              className={`px-3 py-1 rounded border text-sm ${
-                viewMode === 'week'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300'
+              className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+                viewMode === 'week' ? 'text-white' : 'text-blue-300'
               }`}
             >
               Week
-            </button>
-            <button
-              type="button"
+            </RippleButton>
+            <RippleButton
+              rippleColor="rgba(255,255,255,0.6)"
               onClick={() => setViewMode('month')}
-              className={`px-3 py-1 rounded border text-sm ${
-                viewMode === 'month'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300'
+              className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+                viewMode === 'month' ? 'text-white' : 'text-blue-300'
               }`}
             >
               Month
-            </button>
+            </RippleButton>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <RippleButton
+              rippleColor="rgba(255,255,255,0.6)"
               onClick={handlePrev}
-              className="px-3 py-1 rounded border border-gray-300 text-sm bg-white text-gray-700"
+              className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
             >
               ‹ Prev
-            </button>
-            <span className="font-medium text-gray-700">{formatRangeLabel()}</span>
-            <button
-              type="button"
+            </RippleButton>
+            <span className="font-medium text-gray-300">{formatRangeLabel()}</span>
+            <RippleButton
+              rippleColor="rgba(255,255,255,0.6)"
               onClick={handleNext}
-              className="px-3 py-1 rounded border border-gray-300 text-sm bg-white text-gray-700"
+              className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
             >
               Next ›
-            </button>
+            </RippleButton>
           </div>
         </div>
 
@@ -382,59 +379,55 @@ export default function TimelinePage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-4">Timeline</h1>
+      <h1 className="text-3xl font-bold mb-4 text-blue-600">Timeline</h1>
 
       <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-2">
-          <button
-            type="button"
+        <div className="flex border border-blue-900 rounded-lg overflow-hidden">
+          <RippleButton
+            rippleColor="rgba(255,255,255,0.6)"
             onClick={() => setViewMode('day')}
-            className={`px-3 py-1 rounded border text-sm ${
-              viewMode === 'day' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'
+            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+              viewMode === 'day' ? 'text-white' : 'text-blue-300'
             }`}
           >
             Day
-          </button>
-          <button
-            type="button"
+          </RippleButton>
+          <RippleButton
+            rippleColor="rgba(255,255,255,0.6)"
             onClick={() => setViewMode('week')}
-            className={`px-3 py-1 rounded border text-sm ${
-              viewMode === 'week'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-300'
+            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+              viewMode === 'week' ? 'text-white' : 'text-blue-300'
             }`}
           >
             Week
-          </button>
-          <button
-            type="button"
+          </RippleButton>
+          <RippleButton
+            rippleColor="rgba(255,255,255,0.6)"
             onClick={() => setViewMode('month')}
-            className={`px-3 py-1 rounded border text-sm ${
-              viewMode === 'month'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-300'
+            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+              viewMode === 'month' ? 'text-white' : 'text-blue-300'
             }`}
           >
             Month
-          </button>
+          </RippleButton>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <RippleButton
+            rippleColor="rgba(255,255,255,0.6)"
             onClick={handlePrev}
-            className="px-3 py-1 rounded border border-gray-300 text-sm bg-white text-gray-700"
+            className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
           >
             ‹ Prev
-          </button>
-          <span className="font-medium text-gray-700">{formatRangeLabel()}</span>
-          <button
-            type="button"
+          </RippleButton>
+          <span className="font-medium text-gray-300">{formatRangeLabel()}</span>
+          <RippleButton
+            rippleColor="rgba(255,255,255,0.6)"
             onClick={handleNext}
-            className="px-3 py-1 rounded border border-gray-300 text-sm bg-white text-gray-700"
+            className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
           >
             Next ›
-          </button>
+          </RippleButton>
         </div>
       </div>
 
@@ -451,13 +444,13 @@ export default function TimelinePage() {
             }
 
             return (
-              <div className="bg-white border border-gray-200 rounded">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded">
                 <div className="flex">
-                  <div className="w-16 shrink-0 border-r border-gray-200">
+                  <div className="w-16 shrink-0 border-r border-white/10">
                     {Array.from({ length: 24 }).map((_, hour) => (
                       <div
                         key={hour}
-                        className="relative text-xs text-gray-500 pr-2 text-right"
+                        className="relative text-xs text-gray-400 pr-2 text-right"
                         style={{ height: `${HOUR_HEIGHT}px` }}
                       >
                         <div className="absolute -top-2 right-2">{formatHourLabel(hour)}</div>
@@ -553,12 +546,12 @@ export default function TimelinePage() {
               })
 
             return (
-              <div className="bg-white border border-gray-200 rounded">
-                <div className="flex border-b border-gray-200 bg-gray-50 text-xs text-gray-600">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded">
+                <div className="flex border-b border-white/10 bg-white/5 text-xs text-gray-400">
                   <div className="w-16 shrink-0" />
                   <div className="flex-1 grid grid-cols-7">
                     {weekDays.map((date, index) => (
-                      <div key={index} className="py-2 text-center border-l border-gray-200 first:border-l-0">
+                      <div key={index} className="py-2 text-center border-l border-white/10 first:border-l-0">
                         {formatDayHeader(date)}
                       </div>
                     ))}
@@ -566,11 +559,11 @@ export default function TimelinePage() {
                 </div>
 
                 <div className="flex">
-                  <div className="w-16 shrink-0 border-r border-gray-200">
+                  <div className="w-16 shrink-0 border-r border-white/10">
                     {Array.from({ length: 24 }).map((_, hour) => (
                       <div
                         key={hour}
-                        className="relative text-xs text-gray-500 pr-2 text-right"
+                        className="relative text-xs text-gray-400 pr-2 text-right"
                         style={{ height: `${HOUR_HEIGHT}px` }}
                       >
                         <div className="absolute -top-2 right-2">{formatHourLabel(hour)}</div>
@@ -595,7 +588,7 @@ export default function TimelinePage() {
                         return (
                           <div
                             key={dayIndex}
-                            className="flex-1 border-l border-gray-200 first:border-l-0 relative"
+                            className="flex-1 border-l border-white/10 first:border-l-0 relative"
                           >
                             {dayEntries.map((entry, index) => {
                               const duration = getDuration(entry.startTime, entry.endTime)
@@ -687,19 +680,19 @@ export default function TimelinePage() {
             const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
             return (
-              <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-xs text-center text-gray-600">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded overflow-hidden">
+                <div className="grid grid-cols-7 border-b border-white/10 bg-white/5 text-xs text-center text-gray-400">
                   {weekdayLabels.map((label) => (
                     <div key={label} className="py-2">
                       {label}
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-7 gap-px bg-gray-200">
+                <div className="grid grid-cols-7 gap-px bg-white/10">
                   {cells.map((cellDate, index) => {
                     if (!cellDate) {
                       return (
-                        <div key={index} className="min-h-[80px] bg-white" />
+                        <div key={index} className="min-h-[80px] bg-slate-900/60" />
                       )
                     }
 
@@ -709,9 +702,9 @@ export default function TimelinePage() {
                     return (
                       <div
                         key={index}
-                        className="min-h-[80px] bg-white p-2 align-top"
+                        className="min-h-[80px] bg-slate-900/60 p-2 align-top"
                       >
-                        <div className="text-xs font-semibold text-gray-700">
+                        <div className="text-xs font-semibold text-gray-300">
                           {cellDate.getDate()}
                         </div>
                         <div className="mt-1 space-y-1">
