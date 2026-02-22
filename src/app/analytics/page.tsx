@@ -164,15 +164,15 @@ export default function AnalyticsPage() {
   }, [viewMode, currentDate])
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto px-4 py-4 sm:p-6">
       <h1 className="text-3xl font-bold mb-4 text-blue-600">Analytics</h1>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex border border-blue-900 rounded-lg overflow-hidden self-start">
           <RippleButton
             rippleColor="#1e3a8a"
             onClick={() => setViewMode('day')}
-            className={`bg-blue-950 border-blue-900 hover:bg-blue-900 transition-all duration-300 ${
+            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
               viewMode === 'day' ? 'text-white' : 'text-blue-300'
             }`}
           >
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
           <RippleButton
             rippleColor="#1e3a8a"
             onClick={() => setViewMode('week')}
-            className={`bg-blue-950 border-blue-900 hover:bg-blue-900 transition-all duration-300 ${
+            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
               viewMode === 'week' ? 'text-white' : 'text-blue-300'
             }`}
           >
@@ -190,7 +190,7 @@ export default function AnalyticsPage() {
           <RippleButton
             rippleColor="#1e3a8a"
             onClick={() => setViewMode('month')}
-            className={`bg-blue-950 border-blue-900 hover:bg-blue-900 transition-all duration-300 ${
+            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
               viewMode === 'month' ? 'text-white' : 'text-blue-300'
             }`}
           >
@@ -198,19 +198,19 @@ export default function AnalyticsPage() {
           </RippleButton>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <RippleButton
             rippleColor="#1e3a8a"
             onClick={handlePrev}
-            className="bg-blue-950 text-blue-300 border-blue-900 hover:bg-blue-900 transition-all duration-300"
+            className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
           >
             ‹ Prev
           </RippleButton>
-          <span className="font-medium text-gray-300">{formatRangeLabel()}</span>
+          <span className="font-medium text-gray-300 text-sm truncate max-w-[180px] sm:max-w-none">{formatRangeLabel()}</span>
           <RippleButton
             rippleColor="#1e3a8a"
             onClick={handleNext}
-            className="bg-blue-950 text-blue-300 border-blue-900 hover:bg-blue-900 transition-all duration-300"
+            className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
           >
             Next ›
           </RippleButton>
@@ -221,27 +221,29 @@ export default function AnalyticsPage() {
         <p className="text-gray-500">No data available for this period.</p>
       ) : (
         <>
-          <div className="bg-white/5 backdrop-blur-xl border border-white/20 p-6 rounded-lg">
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie
-                  data={data}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  outerRadius={120}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {data.map((entry) => (
-                    <Cell key={entry.name} fill={ACTIVITY_COLORS[entry.name] || '#d1d5db'} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="bg-white/5 backdrop-blur-xl border border-white/20 p-4 sm:p-6 rounded-lg">
+            <div className="h-64 sm:h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {data.map((entry) => (
+                      <Cell key={entry.name} fill={ACTIVITY_COLORS[entry.name] || '#d1d5db'} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
           <div className="mt-6 space-y-2">
             {data.map((item) => (

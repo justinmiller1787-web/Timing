@@ -69,8 +69,9 @@ const GlassSelect = ({ value, onChange, options, placeholder = "Select…", clas
   const selected = options.find((o) => o.value === value && !o.disabled && !o.separator)
 
   const dropdown = open ? (
-    <ul
+    <div
       ref={containerRef}
+      role="listbox"
       style={{
         ...dropdownStyle,
         background: "rgba(15, 23, 42, 0.6)",
@@ -111,7 +112,7 @@ const GlassSelect = ({ value, onChange, options, placeholder = "Select…", clas
           </li>
         )
       )}
-    </ul>
+    </div>
   ) : null
 
   return (
@@ -121,7 +122,7 @@ const GlassSelect = ({ value, onChange, options, placeholder = "Select…", clas
         ref={triggerRef}
         type="button"
         onClick={handleToggle}
-        className="w-full px-4 py-2 text-left focus:outline-none focus:ring-1 focus:ring-white/30 flex items-center justify-between"
+        className="w-full px-4 py-2 text-left focus:outline-none flex items-center justify-between !bg-white/5 rounded-xl"
       >
         <span className={selected ? "text-white" : "text-gray-400"}>
           {selected ? selected.label : placeholder}

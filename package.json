@@ -12,6 +12,7 @@
     "@paper-design/shaders-react": "^0.0.71",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
+    "@supabase/supabase-js": "^2.97.0",
     "@types/react-datepicker": "^6.2.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.0",

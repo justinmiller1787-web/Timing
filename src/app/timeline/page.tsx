@@ -308,9 +308,60 @@ export default function TimelinePage() {
     }
   }, [dragState, MINUTE_HEIGHT])
 
+  const TimelineControls = () => (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="flex border border-blue-900 rounded-lg overflow-hidden self-start">
+        <RippleButton
+          rippleColor="rgba(255,255,255,0.6)"
+          onClick={() => setViewMode('day')}
+          className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+            viewMode === 'day' ? 'text-white' : 'text-blue-300'
+          }`}
+        >
+          Day
+        </RippleButton>
+        <RippleButton
+          rippleColor="rgba(255,255,255,0.6)"
+          onClick={() => setViewMode('week')}
+          className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+            viewMode === 'week' ? 'text-white' : 'text-blue-300'
+          }`}
+        >
+          Week
+        </RippleButton>
+        <RippleButton
+          rippleColor="rgba(255,255,255,0.6)"
+          onClick={() => setViewMode('month')}
+          className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
+            viewMode === 'month' ? 'text-white' : 'text-blue-300'
+          }`}
+        >
+          Month
+        </RippleButton>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <RippleButton
+          rippleColor="rgba(255,255,255,0.6)"
+          onClick={handlePrev}
+          className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
+        >
+          ‹ Prev
+        </RippleButton>
+        <span className="font-medium text-gray-300 text-sm truncate max-w-[180px] sm:max-w-none">{formatRangeLabel()}</span>
+        <RippleButton
+          rippleColor="rgba(255,255,255,0.6)"
+          onClick={handleNext}
+          className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
+        >
+          Next ›
+        </RippleButton>
+      </div>
+    </div>
+  )
+
   if (entries.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto px-4 py-4 sm:p-6">
         <h1 className="text-3xl font-bold mb-6 text-blue-600">Timeline</h1>
         <p className="text-gray-500">No activities logged yet.</p>
       </div>
@@ -319,117 +370,18 @@ export default function TimelinePage() {
 
   if (filteredEntries.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto px-4 py-4 sm:p-6">
         <h1 className="text-3xl font-bold mb-4 text-blue-600">Timeline</h1>
-
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex border border-blue-900 rounded-lg overflow-hidden">
-            <RippleButton
-              rippleColor="rgba(255,255,255,0.6)"
-              onClick={() => setViewMode('day')}
-              className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
-                viewMode === 'day' ? 'text-white' : 'text-blue-300'
-              }`}
-            >
-              Day
-            </RippleButton>
-            <RippleButton
-              rippleColor="rgba(255,255,255,0.6)"
-              onClick={() => setViewMode('week')}
-              className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
-                viewMode === 'week' ? 'text-white' : 'text-blue-300'
-              }`}
-            >
-              Week
-            </RippleButton>
-            <RippleButton
-              rippleColor="rgba(255,255,255,0.6)"
-              onClick={() => setViewMode('month')}
-              className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
-                viewMode === 'month' ? 'text-white' : 'text-blue-300'
-              }`}
-            >
-              Month
-            </RippleButton>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <RippleButton
-              rippleColor="rgba(255,255,255,0.6)"
-              onClick={handlePrev}
-              className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
-            >
-              ‹ Prev
-            </RippleButton>
-            <span className="font-medium text-gray-300">{formatRangeLabel()}</span>
-            <RippleButton
-              rippleColor="rgba(255,255,255,0.6)"
-              onClick={handleNext}
-              className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
-            >
-              Next ›
-            </RippleButton>
-          </div>
-        </div>
-
+        <TimelineControls />
         <p className="text-gray-500">No entries for this period.</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto px-4 py-4 sm:p-6">
       <h1 className="text-3xl font-bold mb-4 text-blue-600">Timeline</h1>
-
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex border border-blue-900 rounded-lg overflow-hidden">
-          <RippleButton
-            rippleColor="rgba(255,255,255,0.6)"
-            onClick={() => setViewMode('day')}
-            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
-              viewMode === 'day' ? 'text-white' : 'text-blue-300'
-            }`}
-          >
-            Day
-          </RippleButton>
-          <RippleButton
-            rippleColor="rgba(255,255,255,0.6)"
-            onClick={() => setViewMode('week')}
-            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
-              viewMode === 'week' ? 'text-white' : 'text-blue-300'
-            }`}
-          >
-            Week
-          </RippleButton>
-          <RippleButton
-            rippleColor="rgba(255,255,255,0.6)"
-            onClick={() => setViewMode('month')}
-            className={`bg-blue-950 border-0 rounded-none transition-all duration-300 ${
-              viewMode === 'month' ? 'text-white' : 'text-blue-300'
-            }`}
-          >
-            Month
-          </RippleButton>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <RippleButton
-            rippleColor="rgba(255,255,255,0.6)"
-            onClick={handlePrev}
-            className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
-          >
-            ‹ Prev
-          </RippleButton>
-          <span className="font-medium text-gray-300">{formatRangeLabel()}</span>
-          <RippleButton
-            rippleColor="rgba(255,255,255,0.6)"
-            onClick={handleNext}
-            className="bg-blue-950 text-blue-300 border-blue-900 transition-all duration-300"
-          >
-            Next ›
-          </RippleButton>
-        </div>
-      </div>
+      <TimelineControls />
 
       <div className="space-y-4">
         {viewMode === 'day' ? (
@@ -546,7 +498,8 @@ export default function TimelinePage() {
               })
 
             return (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded">
+              <div className="overflow-x-auto">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded min-w-[560px]">
                 <div className="flex border-b border-white/10 bg-white/5 text-xs text-gray-400">
                   <div className="w-16 shrink-0" />
                   <div className="flex-1 grid grid-cols-7">
@@ -645,6 +598,7 @@ export default function TimelinePage() {
                   </div>
                 </div>
               </div>
+              </div>
             )
           })()
         ) : (
@@ -692,7 +646,7 @@ export default function TimelinePage() {
                   {cells.map((cellDate, index) => {
                     if (!cellDate) {
                       return (
-                        <div key={index} className="min-h-[80px] bg-slate-900/60" />
+                        <div key={index} className="min-h-[48px] sm:min-h-[80px] bg-slate-900/60" />
                       )
                     }
 
@@ -702,7 +656,7 @@ export default function TimelinePage() {
                     return (
                       <div
                         key={index}
-                        className="min-h-[80px] bg-slate-900/60 p-2 align-top"
+                        className="min-h-[48px] sm:min-h-[80px] bg-slate-900/60 p-1 sm:p-2 align-top"
                       >
                         <div className="text-xs font-semibold text-gray-300">
                           {cellDate.getDate()}

@@ -27,10 +27,10 @@ export default function ActivitiesPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto px-4 py-4 sm:p-6">
       <h1 className="text-3xl font-bold mb-6">Activities</h1>
 
-      <form onSubmit={handleAdd} className="flex gap-2 mb-6">
+      <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2 mb-6">
         <LiquidGlass compact className="rounded-xl flex-1">
           <input
             type="text"
@@ -40,10 +40,10 @@ export default function ActivitiesPage() {
             className="w-full px-3 py-2 bg-transparent border-0 border-transparent rounded text-white placeholder-gray-400 focus:ring-1 focus:ring-white/30 focus:outline-none"
           />
         </LiquidGlass>
-        <LiquidGlass compact className="rounded-xl">
+        <LiquidGlass compact className="rounded-xl sm:w-auto w-full">
           <button
             type="submit"
-            className="px-4 py-2 bg-transparent text-white rounded hover:bg-white/10 transition-colors shadow-none"
+            className="w-full sm:w-auto px-4 py-2 bg-transparent text-white rounded hover:bg-white/10 transition-colors shadow-none"
           >
             Add
           </button>
@@ -57,13 +57,13 @@ export default function ActivitiesPage() {
           {activities.map((activity) => (
             <li
               key={activity}
-              className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded"
+              className="flex items-center justify-between gap-2 px-3 py-2 border border-white/20 rounded bg-white/5"
             >
-              <span>{activity}</span>
+              <span className="truncate text-gray-200">{activity}</span>
               <button
                 type="button"
                 onClick={() => handleRemove(activity)}
-                className="text-red-600 hover:text-red-800 text-sm"
+                className="text-red-400 hover:text-red-300 text-sm shrink-0"
               >
                 Remove
               </button>
