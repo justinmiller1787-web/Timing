@@ -5,6 +5,7 @@ module.exports = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: ['animate-rippling'],
   theme: {
     extend: {
       animation: {
@@ -12,8 +13,8 @@ module.exports = {
       },
       keyframes: {
         rippling: {
-          "0%": { transform: "scale(0)", opacity: "0.6" },
-          "100%": { transform: "scale(2)", opacity: "0" },
+          "0%": { transform: "scale(0)", opacity: "1" },
+          "100%": { transform: "scale(4)", opacity: "0" },
         },
       },
     },
