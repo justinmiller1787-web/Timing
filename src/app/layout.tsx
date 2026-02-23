@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import 'react-datepicker/dist/react-datepicker.css'
 
 import { NavBar } from '@/components/ui/tubelight-navbar'
 import WarpBackground from '@/components/ui/wrap-shader'

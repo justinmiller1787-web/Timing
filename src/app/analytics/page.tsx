@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { RippleButton } from '@/components/ui/ripple-button'
+import { getActivityColors } from '@/lib/storage'
+import { resolveColor } from '@/lib/colors'
 
 interface Entry {
   id: string
@@ -11,19 +13,16 @@ interface Entry {
   endTime: string
 }
 
-const ACTIVITY_COLORS: Record<string, string> = {
-  Sleep: '#93c5fd',
-  Classes: '#c4b5fd',
-  Studying: '#86efac',
-  Gym: '#fca5a5',
-  Work: '#fde047',
-  Social: '#f9a8d4',
-  Scrolling: '#d1d5db',
-  Other: '#fdba74',
+function formatDuration(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  if (h === 0) return `${m}m`
+  return `${h}h ${m}m`
 }
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<{ name: string; value: number; percentage: number }[]>([])
+  const [activityColors, setActivityColors] = useState<Record<string, string>>({})
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
 
@@ -161,6 +160,7 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.value - a.value)
 
     setData(chartData)
+    setActivityColors(getActivityColors())
   }, [viewMode, currentDate])
 
   return (
@@ -236,7 +236,7 @@ export default function AnalyticsPage() {
                     dataKey="value"
                   >
                     {data.map((entry) => (
-                      <Cell key={entry.name} fill={ACTIVITY_COLORS[entry.name] || '#d1d5db'} />
+                      <Cell key={entry.name} fill={resolveColor(entry.name, activityColors)} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -248,9 +248,15 @@ export default function AnalyticsPage() {
           <div className="mt-6 space-y-2">
             {data.map((item) => (
               <div key={item.name} className="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded">
-                <span className="font-medium text-gray-200">{item.name}</span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-3 h-3 rounded-sm shrink-0"
+                    style={{ backgroundColor: resolveColor(item.name, activityColors) }}
+                  />
+                  <span className="font-medium text-gray-200">{item.name}</span>
+                </div>
                 <span className="text-gray-400">
-                  {item.value} minutes ({item.percentage}%)
+                  {formatDuration(item.value)} ({item.percentage}%)
                 </span>
               </div>
             ))}

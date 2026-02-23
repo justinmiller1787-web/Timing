@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import DatePicker from 'react-datepicker'
 import { getActivities } from '@/lib/storage'
 import { LiquidGlass } from '@/components/ui/liquid-glass'
 import { GlassSelect } from '@/components/ui/glass-select'
+import { GlassDateTimePicker } from '@/components/ui/glass-datetime-picker'
 
 const MANAGE_VALUE = '__manage__'
 
@@ -22,7 +22,10 @@ export default function LogPage() {
   const duration = 1000
 
   useEffect(() => {
-    setActivities(getActivities())
+    const sorted = [...getActivities()].sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    )
+    setActivities(sorted)
   }, [])
 
   useEffect(() => {
@@ -113,40 +116,20 @@ export default function LogPage() {
           <div className="flex flex-col">
             <label className="block text-sm font-semibold mb-2 text-blue-500">Start Time</label>
             <LiquidGlass compact className="rounded-xl">
-              <DatePicker
-                selected={startTime}
-                onChange={(date: Date | null) => setStartTime(date)}
-                showTimeSelect
-                timeIntervals={15}
-                dateFormat="MM/dd/yyyy h:mm aa"
-                className="w-full px-4 py-2 bg-transparent border-0 border-transparent rounded-md focus:ring-1 focus:ring-white/30 focus:outline-none"
-                wrapperClassName="w-full"
-                required
-                placeholderText="Select start time"
-                popperClassName="z-[9999]"
-                popperProps={{ strategy: "fixed" }}
-                portalId="root-portal"
-                withPortal
+              <GlassDateTimePicker
+                value={startTime}
+                onChange={setStartTime}
+                placeholder="Select start time"
               />
             </LiquidGlass>
           </div>
           <div className="flex flex-col">
             <label className="block text-sm font-semibold mb-2 text-blue-500">End Time</label>
             <LiquidGlass compact className="rounded-xl">
-              <DatePicker
-                selected={endTime}
-                onChange={(date: Date | null) => setEndTime(date)}
-                showTimeSelect
-                timeIntervals={15}
-                dateFormat="MM/dd/yyyy h:mm aa"
-                className="w-full px-4 py-2 bg-transparent border-0 border-transparent rounded-md focus:ring-1 focus:ring-white/30 focus:outline-none"
-                wrapperClassName="w-full"
-                required
-                placeholderText="Select end time"
-                popperClassName="z-[9999]"
-                popperProps={{ strategy: "fixed" }}
-                portalId="root-portal"
-                withPortal
+              <GlassDateTimePicker
+                value={endTime}
+                onChange={setEndTime}
+                placeholder="Select end time"
               />
             </LiquidGlass>
           </div>

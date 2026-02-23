@@ -83,35 +83,41 @@ const GlassSelect = ({ value, onChange, options, placeholder = "Select…", clas
         padding: "4px 0",
       }}
     >
-      {options.map((option, i) =>
-        option.separator ? (
-          <li key={i} className="mx-3 my-1 border-t border-white/10" aria-hidden />
-        ) : (
-          <li key={option.value + i}>
-            <button
-              type="button"
-              disabled={option.disabled}
-              onMouseDown={(e) => {
-                // prevent the outside-click handler from firing before onChange
-                e.stopPropagation()
-                if (!option.disabled) {
-                  onChange(option.value)
-                  setOpen(false)
-                }
-              }}
-              className={cn(
-                "w-full px-4 py-2 text-left text-sm transition-colors",
-                option.value === value && !option.disabled && !option.separator
-                  ? "text-white bg-white/10"
-                  : "text-gray-300 hover:bg-white/10 hover:text-white",
-                option.disabled && "opacity-40 cursor-not-allowed"
-              )}
-            >
-              {option.label}
-            </button>
-          </li>
-        )
-      )}
+      {/* Scrollable inner list — capped at 40vh so it never overflows off-screen */}
+      <ul
+        className="scrollbar-glass"
+        style={{ maxHeight: "40vh", overflowY: "auto" }}
+      >
+        {options.map((option, i) =>
+          option.separator ? (
+            <li key={i} className="mx-3 my-1 border-t border-white/10" aria-hidden />
+          ) : (
+            <li key={option.value + i}>
+              <button
+                type="button"
+                disabled={option.disabled}
+                onMouseDown={(e) => {
+                  // prevent the outside-click handler from firing before onChange
+                  e.stopPropagation()
+                  if (!option.disabled) {
+                    onChange(option.value)
+                    setOpen(false)
+                  }
+                }}
+                className={cn(
+                  "w-full px-4 py-2 text-left text-sm transition-colors",
+                  option.value === value && !option.disabled && !option.separator
+                    ? "text-white bg-white/10"
+                    : "text-gray-300 hover:bg-white/10 hover:text-white",
+                  option.disabled && "opacity-40 cursor-not-allowed"
+                )}
+              >
+                {option.label}
+              </button>
+            </li>
+          )
+        )}
+      </ul>
     </div>
   ) : null
 

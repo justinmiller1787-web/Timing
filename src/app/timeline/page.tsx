@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { RippleButton } from '@/components/ui/ripple-button'
+import { getActivityColors } from '@/lib/storage'
+import { resolveColor } from '@/lib/colors'
 
 interface Entry {
   id: string
@@ -10,19 +12,60 @@ interface Entry {
   endTime: string
 }
 
-const ACTIVITY_COLORS: Record<string, string> = {
-  Sleep: 'bg-blue-200',
-  Classes: 'bg-purple-200',
-  Studying: 'bg-green-200',
-  Gym: 'bg-red-200',
-  Work: 'bg-yellow-200',
-  Social: 'bg-pink-200',
-  Scrolling: 'bg-gray-200',
-  Other: 'bg-orange-200',
+// Assigns each entry a column index and total-column-count so overlapping
+// entries render side-by-side (Google Calendar style).
+function computeOverlapLayout(entries: Entry[]) {
+  if (entries.length === 0) return []
+
+  const sorted = [...entries].sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  )
+
+  // Greedily assign each entry to the first column whose last entry
+  // ends at or before this entry's start.
+  const colEndTimes: number[] = []
+  const cols: number[] = []
+
+  for (const entry of sorted) {
+    const start = new Date(entry.startTime).getTime()
+    const end   = new Date(entry.endTime).getTime()
+
+    let col = -1
+    for (let c = 0; c < colEndTimes.length; c++) {
+      if (colEndTimes[c] <= start) { col = c; break }
+    }
+    if (col === -1) { col = colEndTimes.length; colEndTimes.push(0) }
+
+    colEndTimes[col] = end
+    cols.push(col)
+  }
+
+  // Sweep to find clusters of transitively-overlapping entries.
+  // All entries in a cluster share the same totalCols = max(col)+1.
+  const totalColsArr = new Array<number>(sorted.length)
+  let clusterStart = 0
+  let clusterEnd   = new Date(sorted[0].endTime).getTime()
+
+  for (let i = 1; i <= sorted.length; i++) {
+    const start = i < sorted.length ? new Date(sorted[i].startTime).getTime() : Infinity
+
+    if (start >= clusterEnd) {
+      // Flush cluster [clusterStart, i)
+      const tc = Math.max(...cols.slice(clusterStart, i)) + 1
+      for (let j = clusterStart; j < i; j++) totalColsArr[j] = tc
+      clusterStart = i
+      clusterEnd   = i < sorted.length ? new Date(sorted[i].endTime).getTime() : Infinity
+    } else {
+      clusterEnd = Math.max(clusterEnd, new Date(sorted[i].endTime).getTime())
+    }
+  }
+
+  return sorted.map((entry, i) => ({ entry, col: cols[i], totalCols: totalColsArr[i] }))
 }
 
 export default function TimelinePage() {
   const [entries, setEntries] = useState<Entry[]>([])
+  const [activityColors, setActivityColors] = useState<Record<string, string>>({})
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
   const MINUTE_HEIGHT = 2
@@ -35,15 +78,18 @@ export default function TimelinePage() {
     startClientY: number
   } | null>(null)
 
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
   useEffect(() => {
     const stored = localStorage.getItem('timingEntries')
     if (stored) {
       const parsed = JSON.parse(stored)
-      const sorted = parsed.sort((a: Entry, b: Entry) => 
+      const sorted = parsed.sort((a: Entry, b: Entry) =>
         new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
       )
       setEntries(sorted)
     }
+    setActivityColors(getActivityColors())
   }, [])
 
   const getRange = (mode: 'day' | 'week' | 'month', date: Date) => {
@@ -216,9 +262,8 @@ export default function TimelinePage() {
       return updated
     })
 
-    if (dragState && dragState.id === id) {
-      setDragState(null)
-    }
+    if (dragState && dragState.id === id) setDragState(null)
+    if (selectedId === id) setSelectedId(null)
   }
 
   useEffect(() => {
@@ -228,7 +273,7 @@ export default function TimelinePage() {
 
     const handleMouseMove = (event: MouseEvent) => {
       const deltaY = event.clientY - dragState.startClientY
-      const deltaMinutes = Math.round(deltaY / MINUTE_HEIGHT)
+      const deltaMinutes = Math.round(deltaY / MINUTE_HEIGHT / 15) * 15
 
       if (deltaMinutes === 0) {
         return
@@ -308,6 +353,29 @@ export default function TimelinePage() {
     }
   }, [dragState, MINUTE_HEIGHT])
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      // Don't intercept when the user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (!selectedId) return
+
+      setEntries((prev) => {
+        const updated = prev.filter((entry) => entry.id !== selectedId)
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('timingEntries', JSON.stringify(updated))
+        }
+        return updated
+      })
+
+      if (dragState?.id === selectedId) setDragState(null)
+      setSelectedId(null)
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectedId, dragState])
+
   const TimelineControls = () => (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
       <div className="flex border border-blue-900 rounded-lg overflow-hidden self-start">
@@ -379,7 +447,7 @@ export default function TimelinePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 sm:p-6">
+    <div className="max-w-4xl mx-auto px-4 py-4 sm:p-6" onClick={() => setSelectedId(null)}>
       <h1 className="text-3xl font-bold mb-4 text-blue-600">Timeline</h1>
       <TimelineControls />
 
@@ -419,25 +487,31 @@ export default function TimelinePage() {
                       />
                     ))}
 
-                    {filteredEntries.map((entry, index) => {
+                    {computeOverlapLayout(filteredEntries).map(({ entry, col, totalCols }, index) => {
                       const duration = getDuration(entry.startTime, entry.endTime)
                       const height = Math.max(duration * MINUTE_HEIGHT, 24)
-                      const color = ACTIVITY_COLORS[entry.activity] || 'bg-gray-200'
+                      const bgColor = resolveColor(entry.activity, activityColors)
 
                       const start = new Date(entry.startTime)
                       const startMinutes = (start.getTime() - rangeStart.getTime()) / (1000 * 60)
                       const top = Math.max(0, Math.min(startMinutes, 24 * 60)) * MINUTE_HEIGHT
 
+                      const pct = 100 / totalCols
+
                       return (
                         <div
                           key={entry.id}
-                          className={`group ${color} absolute left-2 right-2 border border-gray-300 rounded px-3 py-2 overflow-hidden cursor-move`}
+                          className={`group absolute border rounded px-3 py-2 overflow-hidden cursor-move transition-shadow ${selectedId === entry.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
                           style={{
                             top: `${top}px`,
                             height: `${height}px`,
+                            left: `calc(${col * pct}% + 4px)`,
+                            width: `calc(${pct}% - 8px)`,
                             zIndex: index + 1,
+                            backgroundColor: bgColor,
                           }}
                           onMouseDown={(e) => startDrag(e, entry, 'move')}
+                          onClick={(e) => { e.stopPropagation(); setSelectedId(entry.id) }}
                         >
                           <div
                             className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
@@ -454,7 +528,7 @@ export default function TimelinePage() {
                           >
                             ×
                           </button>
-                          <div className="font-semibold text-sm">{entry.activity}</div>
+                          <div className="font-semibold text-sm text-gray-800">{entry.activity}</div>
                           <div className="text-xs text-gray-600">
                             {formatTime(entry.startTime)} - {formatTime(entry.endTime)}
                           </div>
@@ -543,10 +617,10 @@ export default function TimelinePage() {
                             key={dayIndex}
                             className="flex-1 border-l border-white/10 first:border-l-0 relative"
                           >
-                            {dayEntries.map((entry, index) => {
+                            {computeOverlapLayout(dayEntries).map(({ entry, col, totalCols }, index) => {
                               const duration = getDuration(entry.startTime, entry.endTime)
                               const height = Math.max(duration * MINUTE_HEIGHT, 24)
-                              const color = ACTIVITY_COLORS[entry.activity] || 'bg-gray-200'
+                              const bgColor = resolveColor(entry.activity, activityColors)
 
                               const start = new Date(entry.startTime)
                               const dayStart = new Date(dayDate)
@@ -556,16 +630,22 @@ export default function TimelinePage() {
                               const top =
                                 Math.max(0, Math.min(startMinutes, 24 * 60)) * MINUTE_HEIGHT
 
+                              const pct = 100 / totalCols
+
                               return (
                                 <div
                                   key={entry.id}
-                                  className={`group ${color} absolute left-1 right-1 border border-gray-300 rounded px-2 py-1 overflow-hidden cursor-move`}
+                                  className={`group absolute border rounded px-2 py-1 overflow-hidden cursor-move transition-shadow ${selectedId === entry.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
                                   style={{
                                     top: `${top}px`,
                                     height: `${height}px`,
+                                    left: `calc(${col * pct}% + 2px)`,
+                                    width: `calc(${pct}% - 4px)`,
                                     zIndex: index + 1,
+                                    backgroundColor: bgColor,
                                   }}
                                   onMouseDown={(e) => startDrag(e, entry, 'move')}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedId(entry.id) }}
                                 >
                                   <div
                                     className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
@@ -582,7 +662,7 @@ export default function TimelinePage() {
                                   >
                                     ×
                                   </button>
-                                  <div className="font-semibold text-xs truncate">
+                                  <div className="font-semibold text-xs truncate text-gray-800">
                                     {entry.activity}
                                   </div>
                                   <div className="text-[10px] text-gray-600">
@@ -663,12 +743,14 @@ export default function TimelinePage() {
                         </div>
                         <div className="mt-1 space-y-1">
                           {dayEntries.map((entry) => {
-                            const color = ACTIVITY_COLORS[entry.activity] || 'bg-gray-200'
+                            const bgColor = resolveColor(entry.activity, activityColors)
 
                             return (
                               <div
                                 key={entry.id}
-                                className={`group ${color} border border-gray-300 rounded px-1 py-0.5 relative`}
+                                className={`group border rounded px-1 py-0.5 relative transition-shadow ${selectedId === entry.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
+                                style={{ backgroundColor: bgColor }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedId(entry.id) }}
                               >
                                 <button
                                   type="button"
@@ -677,7 +759,7 @@ export default function TimelinePage() {
                                 >
                                   ×
                                 </button>
-                                <div className="text-[11px] font-medium truncate">
+                                <div className="text-[11px] font-medium truncate text-gray-800">
                                   {entry.activity}
                                 </div>
                                 <div className="text-[10px] text-gray-600 truncate">
