@@ -12,6 +12,12 @@ interface Entry {
   endTime: string
 }
 
+// Two entries overlap iff startA < endB && endA > startB  (strict inequalities).
+// Touching at the same millisecond (endA === startB) is NOT overlap.
+function overlaps(startA: number, endA: number, startB: number, endB: number): boolean {
+  return startA < endB && endA > startB
+}
+
 // Assigns each entry a column index and total-column-count so overlapping
 // entries render side-by-side (Google Calendar style).
 function computeOverlapLayout(entries: Entry[]) {
@@ -21,8 +27,17 @@ function computeOverlapLayout(entries: Entry[]) {
     (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   )
 
-  // Greedily assign each entry to the first column whose last entry
-  // ends at or before this entry's start.
+  console.log('[overlap] ── computing layout for', sorted.length, 'entries ──')
+  sorted.forEach((e, i) => {
+    const s = new Date(e.startTime).getTime()
+    const en = new Date(e.endTime).getTime()
+    console.log(`[overlap]   [${i}] "${e.activity}"  start=${s}  end=${en}  raw="${e.startTime}" → "${e.endTime}"`)
+  })
+
+  // ── Pass 1: greedy column assignment ────────────────────────────────────────
+  // A column is free for entry E when its last end time <= E.start, i.e. they
+  // do NOT satisfy the strict overlap condition (endCol > startE is required
+  // for overlap; endCol === startE is touching, which is NOT overlap).
   const colEndTimes: number[] = []
   const cols: number[] = []
 
@@ -32,26 +47,34 @@ function computeOverlapLayout(entries: Entry[]) {
 
     let col = -1
     for (let c = 0; c < colEndTimes.length; c++) {
-      if (colEndTimes[c] <= start) { col = c; break }
+      // Strict overlap needs endCol > startE; touching (endCol === startE) is free.
+      const busy = colEndTimes[c] > start   // i.e. overlaps(colStart?, colEndTimes[c], start, end)
+      console.log(`[overlap]   "${entry.activity}" vs col ${c}: colEnd=${colEndTimes[c]} entryStart=${start} busy=${busy}`)
+      if (!busy) { col = c; break }
     }
     if (col === -1) { col = colEndTimes.length; colEndTimes.push(0) }
 
     colEndTimes[col] = end
     cols.push(col)
+    console.log(`[overlap]   "${entry.activity}" → col=${col}`)
   }
 
-  // Sweep to find clusters of transitively-overlapping entries.
-  // All entries in a cluster share the same totalCols = max(col)+1.
+  // ── Pass 2: cluster sweep ────────────────────────────────────────────────────
+  // A cluster boundary exists when the next entry starts at or after the
+  // cluster's current end (touching counts as a boundary — not the same cluster).
   const totalColsArr = new Array<number>(sorted.length)
   let clusterStart = 0
   let clusterEnd   = new Date(sorted[0].endTime).getTime()
 
   for (let i = 1; i <= sorted.length; i++) {
     const start = i < sorted.length ? new Date(sorted[i].startTime).getTime() : Infinity
+    // New cluster when next start >= clusterEnd (touching is NOT same cluster).
+    const flush = start >= clusterEnd
+    console.log(`[overlap]   sweep i=${i}: nextStart=${start} clusterEnd=${clusterEnd} flush=${flush}`)
 
-    if (start >= clusterEnd) {
-      // Flush cluster [clusterStart, i)
+    if (flush) {
       const tc = Math.max(...cols.slice(clusterStart, i)) + 1
+      console.log(`[overlap]   → flushing cluster [${clusterStart},${i}) totalCols=${tc}`)
       for (let j = clusterStart; j < i; j++) totalColsArr[j] = tc
       clusterStart = i
       clusterEnd   = i < sorted.length ? new Date(sorted[i].endTime).getTime() : Infinity
@@ -60,7 +83,9 @@ function computeOverlapLayout(entries: Entry[]) {
     }
   }
 
-  return sorted.map((entry, i) => ({ entry, col: cols[i], totalCols: totalColsArr[i] }))
+  const result = sorted.map((entry, i) => ({ entry, col: cols[i], totalCols: totalColsArr[i] }))
+  console.log('[overlap] result:', result.map(r => `"${r.entry.activity}" col=${r.col}/${r.totalCols}`).join(', '))
+  return result
 }
 
 export default function TimelinePage() {
