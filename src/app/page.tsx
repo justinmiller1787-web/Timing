@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getActivities } from '@/lib/storage'
+import { addEntry } from '@/lib/entries'
 import { LiquidGlass } from '@/components/ui/liquid-glass'
 import { GlassSelect } from '@/components/ui/glass-select'
 import { GlassDateTimePicker } from '@/components/ui/glass-datetime-picker'
@@ -69,17 +70,12 @@ export default function LogPage() {
       return
     }
 
-    const entry = {
-      id: Date.now().toString(),
+    await addEntry({
+      id: crypto.randomUUID(),
       activity,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
-    }
-
-    const existing = localStorage.getItem('timingEntries')
-    const entries = existing ? JSON.parse(existing) : []
-    entries.push(entry)
-    localStorage.setItem('timingEntries', JSON.stringify(entries))
+    })
 
     setActivity('')
     setStartTime(null)

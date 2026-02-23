@@ -5,13 +5,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { RippleButton } from '@/components/ui/ripple-button'
 import { getActivityColors } from '@/lib/storage'
 import { resolveColor } from '@/lib/colors'
-
-interface Entry {
-  id: string
-  activity: string
-  startTime: string
-  endTime: string
-}
+import { getEntries } from '@/lib/entries'
+import type { Entry } from '@/lib/entries'
 
 function formatDuration(totalMinutes: number): string {
   const h = Math.floor(totalMinutes / 60)
@@ -121,46 +116,46 @@ export default function AnalyticsPage() {
   }
 
   useEffect(() => {
-    const stored = localStorage.getItem('timingEntries')
-    if (!stored) {
-      setData([])
-      return
-    }
+    let cancelled = false
 
-    const entries: Entry[] = JSON.parse(stored)
-    const { start: rangeStart, end: rangeEnd } = getRange(viewMode, currentDate)
+    getEntries().then((allEntries) => {
+      if (cancelled) return
 
-    const filteredEntries = entries.filter((entry) => {
-      const entryStart = new Date(entry.startTime)
-      return entryStart >= rangeStart && entryStart < rangeEnd
-    })
+      const { start: rangeStart, end: rangeEnd } = getRange(viewMode, currentDate)
 
-    const totals: Record<string, number> = {}
+      const filteredEntries = allEntries.filter((entry: Entry) => {
+        const entryStart = new Date(entry.startTime)
+        return entryStart >= rangeStart && entryStart < rangeEnd
+      })
 
-    filteredEntries.forEach((entry) => {
-      const startDate = new Date(entry.startTime)
-      const endDate = new Date(entry.endTime)
-      const minutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60)
-      
-      if (totals[entry.activity]) {
-        totals[entry.activity] += minutes
-      } else {
-        totals[entry.activity] = minutes
+      if (filteredEntries.length === 0) {
+        setData([])
+        return
       }
+
+      const totals: Record<string, number> = {}
+
+      filteredEntries.forEach((entry: Entry) => {
+        const minutes =
+          (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60)
+        totals[entry.activity] = (totals[entry.activity] ?? 0) + minutes
+      })
+
+      const totalMinutes = Object.values(totals).reduce((sum, val) => sum + val, 0)
+
+      const chartData = Object.entries(totals)
+        .map(([name, value]) => ({
+          name,
+          value: Math.round(value),
+          percentage: totalMinutes > 0 ? Math.round((value / totalMinutes) * 100) : 0,
+        }))
+        .sort((a, b) => b.value - a.value)
+
+      setData(chartData)
+      setActivityColors(getActivityColors())
     })
 
-    const totalMinutes = Object.values(totals).reduce((sum, val) => sum + val, 0)
-
-    const chartData = Object.entries(totals)
-      .map(([name, value]) => ({
-        name,
-        value: Math.round(value),
-        percentage: totalMinutes > 0 ? Math.round((value / totalMinutes) * 100) : 0,
-      }))
-      .sort((a, b) => b.value - a.value)
-
-    setData(chartData)
-    setActivityColors(getActivityColors())
+    return () => { cancelled = true }
   }, [viewMode, currentDate])
 
   return (

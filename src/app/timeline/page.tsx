@@ -1,16 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { RippleButton } from '@/components/ui/ripple-button'
 import { getActivityColors } from '@/lib/storage'
 import { resolveColor } from '@/lib/colors'
-
-interface Entry {
-  id: string
-  activity: string
-  startTime: string
-  endTime: string
-}
+import { getEntries, updateEntry, deleteEntry } from '@/lib/entries'
+import type { Entry } from '@/lib/entries'
 
 // Two entries overlap iff startA < endB && endA > startB  (strict inequalities).
 // Touching at the same millisecond (endA === startB) is NOT overlap.
@@ -105,15 +100,12 @@ export default function TimelinePage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  // Tracks the final state of the entry being dragged so we can persist it
+  // to Supabase on mouseup without firing one request per mousemove event.
+  const draggedFinalRef = useRef<Entry | null>(null)
+
   useEffect(() => {
-    const stored = localStorage.getItem('timingEntries')
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      const sorted = parsed.sort((a: Entry, b: Entry) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-      )
-      setEntries(sorted)
-    }
+    getEntries().then((data) => setEntries(data))
     setActivityColors(getActivityColors())
   }, [])
 
@@ -276,17 +268,8 @@ export default function TimelinePage() {
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-
-    setEntries((prev) => {
-      const updated = prev.filter((entry) => entry.id !== id)
-
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('timingEntries', JSON.stringify(updated))
-      }
-
-      return updated
-    })
-
+    setEntries((prev) => prev.filter((entry) => entry.id !== id))
+    deleteEntry(id).catch((err) => console.error('[entries] delete failed:', err))
     if (dragState && dragState.id === id) setDragState(null)
     if (selectedId === id) setSelectedId(null)
   }
@@ -315,57 +298,41 @@ export default function TimelinePage() {
           const originalStartDate = new Date(dragState.originalStart)
           const originalEndDate = new Date(dragState.originalEnd)
 
+          let newEntry = entry
+
           if (dragState.type === 'move') {
             const newStart = new Date(originalStartDate.getTime() + deltaMinutes * minuteMs)
             const newEnd = new Date(originalEndDate.getTime() + deltaMinutes * minuteMs)
-
-            return {
-              ...entry,
-              startTime: newStart.toISOString(),
-              endTime: newEnd.toISOString(),
-            }
-          }
-
-          if (dragState.type === 'resizeTop') {
+            newEntry = { ...entry, startTime: newStart.toISOString(), endTime: newEnd.toISOString() }
+          } else if (dragState.type === 'resizeTop') {
             let newStart = new Date(originalStartDate.getTime() + deltaMinutes * minuteMs)
             const minStart = new Date(originalEndDate.getTime() - 5 * minuteMs)
-
-            if (newStart > minStart) {
-              newStart = minStart
-            }
-
-            return {
-              ...entry,
-              startTime: newStart.toISOString(),
-            }
-          }
-
-          if (dragState.type === 'resizeBottom') {
+            if (newStart > minStart) newStart = minStart
+            newEntry = { ...entry, startTime: newStart.toISOString() }
+          } else if (dragState.type === 'resizeBottom') {
             let newEnd = new Date(originalEndDate.getTime() + deltaMinutes * minuteMs)
             const minEnd = new Date(originalStartDate.getTime() + 5 * minuteMs)
-
-            if (newEnd < minEnd) {
-              newEnd = minEnd
-            }
-
-            return {
-              ...entry,
-              endTime: newEnd.toISOString(),
-            }
+            if (newEnd < minEnd) newEnd = minEnd
+            newEntry = { ...entry, endTime: newEnd.toISOString() }
           }
 
-          return entry
+          // Track the latest dragged state so mouseup can persist it.
+          draggedFinalRef.current = newEntry
+          return newEntry
         })
-
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('timingEntries', JSON.stringify(updated))
-        }
 
         return updated
       })
     }
 
     const handleMouseUp = () => {
+      // Persist the final dragged position to Supabase once on release.
+      const dragged = draggedFinalRef.current
+      if (dragged) {
+        updateEntry(dragged.id, { startTime: dragged.startTime, endTime: dragged.endTime })
+          .catch((err) => console.error('[entries] drag save failed:', err))
+        draggedFinalRef.current = null
+      }
       setDragState(null)
     }
 
@@ -381,19 +348,13 @@ export default function TimelinePage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
-      // Don't intercept when the user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (!selectedId) return
 
-      setEntries((prev) => {
-        const updated = prev.filter((entry) => entry.id !== selectedId)
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('timingEntries', JSON.stringify(updated))
-        }
-        return updated
-      })
-
-      if (dragState?.id === selectedId) setDragState(null)
+      const idToDelete = selectedId
+      setEntries((prev) => prev.filter((entry) => entry.id !== idToDelete))
+      deleteEntry(idToDelete).catch((err) => console.error('[entries] keyboard delete failed:', err))
+      if (dragState?.id === idToDelete) setDragState(null)
       setSelectedId(null)
     }
 
