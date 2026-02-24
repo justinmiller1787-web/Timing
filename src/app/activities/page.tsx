@@ -25,6 +25,7 @@ function ColorPicker({
   onSelect: (hex: string) => void
 }) {
   const swatchRef = useRef<HTMLButtonElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const [mounted, setMounted] = useState(false)
 
@@ -36,12 +37,25 @@ function ColorPicker({
     const handler = (e: MouseEvent) => {
       const target = e.target as Node
       if (swatchRef.current?.contains(target)) return
-      const popup = document.getElementById(`acp-${activity}`)
-      if (!popup?.contains(target)) onClose()
+      if (popupRef.current?.contains(target)) return
+      onClose()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [isOpen, activity, onClose])
+  }, [isOpen, onClose])
+
+  // After popup renders, measure it and flip above if it overflows the viewport.
+  useEffect(() => {
+    if (!isOpen || !popupRef.current) return
+    const popupRect = popupRef.current.getBoundingClientRect()
+    if (popupRect.bottom > window.innerHeight) {
+      const swatchRect = swatchRef.current!.getBoundingClientRect()
+      setPos((prev) => ({
+        ...prev,
+        top: swatchRect.top - popupRect.height - 6,
+      }))
+    }
+  }, [isOpen])
 
   const handleSwatchClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -56,7 +70,7 @@ function ColorPicker({
 
   const popup = isOpen && mounted ? createPortal(
     <div
-      id={`acp-${activity}`}
+      ref={popupRef}
       style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
       className="rounded-2xl border border-white/15 bg-slate-900/60 backdrop-blur-lg shadow-xl p-3"
     >

@@ -122,10 +122,15 @@ export default function AnalyticsPage() {
       if (cancelled) return
 
       const { start: rangeStart, end: rangeEnd } = getRange(viewMode, currentDate)
+      const rStart = rangeStart.getTime()
+      const rEnd   = rangeEnd.getTime()
 
+      // Include any entry that overlaps the range, then clamp its time to
+      // only count the minutes that actually fall within the range.
       const filteredEntries = allEntries.filter((entry: Entry) => {
-        const entryStart = new Date(entry.startTime)
-        return entryStart >= rangeStart && entryStart < rangeEnd
+        const eStart = new Date(entry.startTime).getTime()
+        const eEnd   = new Date(entry.endTime).getTime()
+        return eStart < rEnd && eEnd > rStart
       })
 
       if (filteredEntries.length === 0) {
@@ -136,9 +141,12 @@ export default function AnalyticsPage() {
       const totals: Record<string, number> = {}
 
       filteredEntries.forEach((entry: Entry) => {
-        const minutes =
-          (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60)
-        totals[entry.activity] = (totals[entry.activity] ?? 0) + minutes
+        const eStart = Math.max(new Date(entry.startTime).getTime(), rStart)
+        const eEnd   = Math.min(new Date(entry.endTime).getTime(), rEnd)
+        const minutes = (eEnd - eStart) / (1000 * 60)
+        if (minutes > 0) {
+          totals[entry.activity] = (totals[entry.activity] ?? 0) + minutes
+        }
       })
 
       const totalMinutes = Object.values(totals).reduce((sum, val) => sum + val, 0)

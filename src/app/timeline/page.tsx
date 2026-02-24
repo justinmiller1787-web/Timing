@@ -7,8 +7,73 @@ import { resolveColor } from '@/lib/colors'
 import { getEntries, updateEntry, deleteEntry } from '@/lib/entries'
 import type { Entry } from '@/lib/entries'
 
+// Display-only segment produced by splitting entries at midnight boundaries.
+// Keeps the original entry id/activity so delete/drag still work on the real entry.
+interface DisplaySegment extends Entry {
+  originalStart: string
+  originalEnd: string
+}
+
+// Returns the local-time midnight at the start of a given date's calendar day.
+function localMidnight(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
+// Returns the local-time midnight at the START of the next calendar day.
+function nextLocalMidnight(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
+}
+
+// Checks if two dates fall on different local calendar days.
+function differentDay(a: Date, b: Date): boolean {
+  return a.getFullYear() !== b.getFullYear() ||
+         a.getMonth() !== b.getMonth() ||
+         a.getDate() !== b.getDate()
+}
+
+// Splits an entry into per-day display segments at local-midnight boundaries.
+// E.g. 11:30 PM → 1:00 AM next day becomes:
+//   seg 1: 11:30 PM → midnight
+//   seg 2: midnight → 1:00 AM
+function splitAtMidnights(entry: Entry): DisplaySegment[] {
+  const start = new Date(entry.startTime)
+  const end   = new Date(entry.endTime)
+
+  if (!differentDay(start, end)) {
+    return [{
+      ...entry,
+      originalStart: entry.startTime,
+      originalEnd: entry.endTime,
+    }]
+  }
+
+  const segments: DisplaySegment[] = []
+  let cursor = start
+
+  while (cursor.getTime() < end.getTime()) {
+    const dayEnd = nextLocalMidnight(cursor)
+    const segEnd = dayEnd.getTime() < end.getTime() ? dayEnd : end
+
+    segments.push({
+      id: entry.id,
+      activity: entry.activity,
+      startTime: cursor.toISOString(),
+      endTime: segEnd.toISOString(),
+      originalStart: entry.startTime,
+      originalEnd: entry.endTime,
+    })
+
+    cursor = segEnd
+  }
+
+  return segments
+}
+
+function splitAll(entries: Entry[]): DisplaySegment[] {
+  return entries.flatMap(splitAtMidnights)
+}
+
 // Two entries overlap iff startA < endB && endA > startB  (strict inequalities).
-// Touching at the same millisecond (endA === startB) is NOT overlap.
 function overlaps(startA: number, endA: number, startB: number, endB: number): boolean {
   return startA < endB && endA > startB
 }
@@ -22,17 +87,6 @@ function computeOverlapLayout(entries: Entry[]) {
     (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   )
 
-  console.log('[overlap] ── computing layout for', sorted.length, 'entries ──')
-  sorted.forEach((e, i) => {
-    const s = new Date(e.startTime).getTime()
-    const en = new Date(e.endTime).getTime()
-    console.log(`[overlap]   [${i}] "${e.activity}"  start=${s}  end=${en}  raw="${e.startTime}" → "${e.endTime}"`)
-  })
-
-  // ── Pass 1: greedy column assignment ────────────────────────────────────────
-  // A column is free for entry E when its last end time <= E.start, i.e. they
-  // do NOT satisfy the strict overlap condition (endCol > startE is required
-  // for overlap; endCol === startE is touching, which is NOT overlap).
   const colEndTimes: number[] = []
   const cols: number[] = []
 
@@ -42,34 +96,23 @@ function computeOverlapLayout(entries: Entry[]) {
 
     let col = -1
     for (let c = 0; c < colEndTimes.length; c++) {
-      // Strict overlap needs endCol > startE; touching (endCol === startE) is free.
-      const busy = colEndTimes[c] > start   // i.e. overlaps(colStart?, colEndTimes[c], start, end)
-      console.log(`[overlap]   "${entry.activity}" vs col ${c}: colEnd=${colEndTimes[c]} entryStart=${start} busy=${busy}`)
-      if (!busy) { col = c; break }
+      if (colEndTimes[c] <= start) { col = c; break }
     }
     if (col === -1) { col = colEndTimes.length; colEndTimes.push(0) }
 
     colEndTimes[col] = end
     cols.push(col)
-    console.log(`[overlap]   "${entry.activity}" → col=${col}`)
   }
 
-  // ── Pass 2: cluster sweep ────────────────────────────────────────────────────
-  // A cluster boundary exists when the next entry starts at or after the
-  // cluster's current end (touching counts as a boundary — not the same cluster).
   const totalColsArr = new Array<number>(sorted.length)
   let clusterStart = 0
   let clusterEnd   = new Date(sorted[0].endTime).getTime()
 
   for (let i = 1; i <= sorted.length; i++) {
     const start = i < sorted.length ? new Date(sorted[i].startTime).getTime() : Infinity
-    // New cluster when next start >= clusterEnd (touching is NOT same cluster).
-    const flush = start >= clusterEnd
-    console.log(`[overlap]   sweep i=${i}: nextStart=${start} clusterEnd=${clusterEnd} flush=${flush}`)
 
-    if (flush) {
+    if (start >= clusterEnd) {
       const tc = Math.max(...cols.slice(clusterStart, i)) + 1
-      console.log(`[overlap]   → flushing cluster [${clusterStart},${i}) totalCols=${tc}`)
       for (let j = clusterStart; j < i; j++) totalColsArr[j] = tc
       clusterStart = i
       clusterEnd   = i < sorted.length ? new Date(sorted[i].endTime).getTime() : Infinity
@@ -78,9 +121,7 @@ function computeOverlapLayout(entries: Entry[]) {
     }
   }
 
-  const result = sorted.map((entry, i) => ({ entry, col: cols[i], totalCols: totalColsArr[i] }))
-  console.log('[overlap] result:', result.map(r => `"${r.entry.activity}" col=${r.col}/${r.totalCols}`).join(', '))
-  return result
+  return sorted.map((entry, i) => ({ entry, col: cols[i], totalCols: totalColsArr[i] }))
 }
 
 export default function TimelinePage() {
@@ -221,16 +262,21 @@ export default function TimelinePage() {
 
   const { start: rangeStart, end: rangeEnd } = getRange(viewMode, currentDate)
 
+  // Include any entry that overlaps the current range (not just starts within it),
+  // so midnight-crossing entries show their second-day segment on the next day.
   const filteredEntries = entries.filter((entry) => {
-    const entryStart = new Date(entry.startTime)
-    return entryStart >= rangeStart && entryStart < rangeEnd
+    const eStart = new Date(entry.startTime).getTime()
+    const eEnd   = new Date(entry.endTime).getTime()
+    return eStart < rangeEnd.getTime() && eEnd > rangeStart.getTime()
   })
 
+  // Split entries at midnight boundaries, then group the display segments by day.
   const groupEntriesByDay = (list: Entry[]) => {
-    const groups: Record<string, Entry[]> = {}
+    const segments = splitAll(list)
+    const groups: Record<string, DisplaySegment[]> = {}
 
-    list.forEach((entry) => {
-      const date = new Date(entry.startTime)
+    segments.forEach((seg) => {
+      const date = new Date(seg.startTime)
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
@@ -239,8 +285,7 @@ export default function TimelinePage() {
       if (!groups[key]) {
         groups[key] = []
       }
-
-      groups[key].push(entry)
+      groups[key].push(seg)
     })
 
     return groups
@@ -473,54 +518,58 @@ export default function TimelinePage() {
                       />
                     ))}
 
-                    {computeOverlapLayout(filteredEntries).map(({ entry, col, totalCols }, index) => {
-                      const duration = getDuration(entry.startTime, entry.endTime)
-                      const height = Math.max(duration * MINUTE_HEIGHT, 24)
-                      const bgColor = resolveColor(entry.activity, activityColors)
+                    {(() => {
+                      const dayKey = `${rangeStart.getFullYear()}-${String(rangeStart.getMonth() + 1).padStart(2, '0')}-${String(rangeStart.getDate()).padStart(2, '0')}`
+                      const daySegs = groupedEntries[dayKey] || []
+                      return computeOverlapLayout(daySegs).map(({ entry: seg, col, totalCols }, index) => {
+                        const duration = getDuration(seg.startTime, seg.endTime)
+                        const height = Math.max(duration * MINUTE_HEIGHT, 24)
+                        const bgColor = resolveColor(seg.activity, activityColors)
 
-                      const start = new Date(entry.startTime)
-                      const startMinutes = (start.getTime() - rangeStart.getTime()) / (1000 * 60)
-                      const top = Math.max(0, Math.min(startMinutes, 24 * 60)) * MINUTE_HEIGHT
+                        const start = new Date(seg.startTime)
+                        const startMinutes = (start.getTime() - rangeStart.getTime()) / (1000 * 60)
+                        const top = Math.max(0, Math.min(startMinutes, 24 * 60)) * MINUTE_HEIGHT
 
-                      const pct = 100 / totalCols
+                        const pct = 100 / totalCols
 
-                      return (
-                        <div
-                          key={entry.id}
-                          className={`group absolute border rounded px-3 py-2 overflow-hidden cursor-move transition-shadow ${selectedId === entry.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
-                          style={{
-                            top: `${top}px`,
-                            height: `${height}px`,
-                            left: `calc(${col * pct}% + 4px)`,
-                            width: `calc(${pct}% - 8px)`,
-                            zIndex: index + 1,
-                            backgroundColor: bgColor,
-                          }}
-                          onMouseDown={(e) => startDrag(e, entry, 'move')}
-                          onClick={(e) => { e.stopPropagation(); setSelectedId(entry.id) }}
-                        >
+                        return (
                           <div
-                            className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
-                            onMouseDown={(e) => startDrag(e, entry, 'resizeTop')}
-                          />
-                          <div
-                            className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize"
-                            onMouseDown={(e) => startDrag(e, entry, 'resizeBottom')}
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => handleDelete(e, entry.id)}
-                            className="absolute top-1 right-1 text-xs text-gray-600 hover:text-red-600 hidden group-hover:inline"
+                            key={`${seg.id}-${seg.startTime}`}
+                            className={`group absolute border rounded px-3 py-2 overflow-hidden cursor-move transition-shadow ${selectedId === seg.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
+                            style={{
+                              top: `${top}px`,
+                              height: `${height}px`,
+                              left: `calc(${col * pct}% + 4px)`,
+                              width: `calc(${pct}% - 8px)`,
+                              zIndex: index + 1,
+                              backgroundColor: bgColor,
+                            }}
+                            onMouseDown={(e) => startDrag(e, seg, 'move')}
+                            onClick={(e) => { e.stopPropagation(); setSelectedId(seg.id) }}
                           >
-                            ×
-                          </button>
-                          <div className="font-semibold text-sm text-gray-800">{entry.activity}</div>
-                          <div className="text-xs text-gray-600">
-                            {formatTime(entry.startTime)} - {formatTime(entry.endTime)}
+                            <div
+                              className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
+                              onMouseDown={(e) => startDrag(e, seg, 'resizeTop')}
+                            />
+                            <div
+                              className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize"
+                              onMouseDown={(e) => startDrag(e, seg, 'resizeBottom')}
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => handleDelete(e, seg.id)}
+                              className="absolute top-1 right-1 text-xs text-gray-600 hover:text-red-600 hidden group-hover:inline"
+                            >
+                              ×
+                            </button>
+                            <div className="font-semibold text-sm text-gray-800">{seg.activity}</div>
+                            <div className="text-xs text-gray-600">
+                              {formatTime(seg.startTime)} - {formatTime(seg.endTime)}
+                            </div>
                           </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })
+                    })()}
                   </div>
                 </div>
               </div>
@@ -603,12 +652,12 @@ export default function TimelinePage() {
                             key={dayIndex}
                             className="flex-1 border-l border-white/10 first:border-l-0 relative"
                           >
-                            {computeOverlapLayout(dayEntries).map(({ entry, col, totalCols }, index) => {
-                              const duration = getDuration(entry.startTime, entry.endTime)
+                            {computeOverlapLayout(dayEntries).map(({ entry: seg, col, totalCols }, index) => {
+                              const duration = getDuration(seg.startTime, seg.endTime)
                               const height = Math.max(duration * MINUTE_HEIGHT, 24)
-                              const bgColor = resolveColor(entry.activity, activityColors)
+                              const bgColor = resolveColor(seg.activity, activityColors)
 
-                              const start = new Date(entry.startTime)
+                              const start = new Date(seg.startTime)
                               const dayStart = new Date(dayDate)
                               dayStart.setHours(0, 0, 0, 0)
                               const startMinutes =
@@ -620,8 +669,8 @@ export default function TimelinePage() {
 
                               return (
                                 <div
-                                  key={entry.id}
-                                  className={`group absolute border rounded px-2 py-1 overflow-hidden cursor-move transition-shadow ${selectedId === entry.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
+                                  key={`${seg.id}-${seg.startTime}`}
+                                  className={`group absolute border rounded px-2 py-1 overflow-hidden cursor-move transition-shadow ${selectedId === seg.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
                                   style={{
                                     top: `${top}px`,
                                     height: `${height}px`,
@@ -630,29 +679,29 @@ export default function TimelinePage() {
                                     zIndex: index + 1,
                                     backgroundColor: bgColor,
                                   }}
-                                  onMouseDown={(e) => startDrag(e, entry, 'move')}
-                                  onClick={(e) => { e.stopPropagation(); setSelectedId(entry.id) }}
+                                  onMouseDown={(e) => startDrag(e, seg, 'move')}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedId(seg.id) }}
                                 >
                                   <div
                                     className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
-                                    onMouseDown={(e) => startDrag(e, entry, 'resizeTop')}
+                                    onMouseDown={(e) => startDrag(e, seg, 'resizeTop')}
                                   />
                                   <div
                                     className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize"
-                                    onMouseDown={(e) => startDrag(e, entry, 'resizeBottom')}
+                                    onMouseDown={(e) => startDrag(e, seg, 'resizeBottom')}
                                   />
                                   <button
                                     type="button"
-                                    onClick={(e) => handleDelete(e, entry.id)}
+                                    onClick={(e) => handleDelete(e, seg.id)}
                                     className="absolute top-1 right-1 text-xs text-gray-600 hover:text-red-600 hidden group-hover:inline"
                                   >
                                     ×
                                   </button>
                                   <div className="font-semibold text-xs truncate text-gray-800">
-                                    {entry.activity}
+                                    {seg.activity}
                                   </div>
                                   <div className="text-[10px] text-gray-600">
-                                    {formatTime(entry.startTime)} - {formatTime(entry.endTime)}
+                                    {formatTime(seg.startTime)} - {formatTime(seg.endTime)}
                                   </div>
                                 </div>
                               )
@@ -728,28 +777,28 @@ export default function TimelinePage() {
                           {cellDate.getDate()}
                         </div>
                         <div className="mt-1 space-y-1">
-                          {dayEntries.map((entry) => {
-                            const bgColor = resolveColor(entry.activity, activityColors)
+                          {dayEntries.map((seg) => {
+                            const bgColor = resolveColor(seg.activity, activityColors)
 
                             return (
                               <div
-                                key={entry.id}
-                                className={`group border rounded px-1 py-0.5 relative transition-shadow ${selectedId === entry.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
+                                key={`${seg.id}-${seg.startTime}`}
+                                className={`group border rounded px-1 py-0.5 relative transition-shadow ${selectedId === seg.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-300'}`}
                                 style={{ backgroundColor: bgColor }}
-                                onClick={(e) => { e.stopPropagation(); setSelectedId(entry.id) }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedId(seg.id) }}
                               >
                                 <button
                                   type="button"
-                                  onClick={(e) => handleDelete(e, entry.id)}
+                                  onClick={(e) => handleDelete(e, seg.id)}
                                   className="absolute top-0.5 right-0.5 text-[10px] text-gray-600 hover:text-red-600 hidden group-hover:inline"
                                 >
                                   ×
                                 </button>
                                 <div className="text-[11px] font-medium truncate text-gray-800">
-                                  {entry.activity}
+                                  {seg.activity}
                                 </div>
                                 <div className="text-[10px] text-gray-600 truncate">
-                                  {formatTime(entry.startTime)}
+                                  {formatTime(seg.startTime)}
                                 </div>
                               </div>
                             )
