@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { LucideIcon, Edit, Clock, BarChart2 } from "lucide-react"
+import { LucideIcon, Edit, Clock, BarChart2, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/lib/auth"
 
 interface NavItem {
     name: string
@@ -25,7 +26,7 @@ interface NavBarProps {
 
 export function NavBar({ className }: NavBarProps) {
     const pathname = usePathname()
-    // Initialize activeTab based on pathname
+    const { user, signOut } = useAuth()
     const [activeTab, setActiveTab] = useState(items[0].name)
     const [isMobile, setIsMobile] = useState(false)
 
@@ -40,12 +41,13 @@ export function NavBar({ className }: NavBarProps) {
     }, [])
 
     useEffect(() => {
-        // Update active tab when pathname changes
         const currentItem = items.find(item => item.url === pathname)
         if (currentItem) {
             setActiveTab(currentItem.name)
         }
     }, [pathname])
+
+    if (!user) return null
 
     return (
         <div
@@ -88,6 +90,18 @@ export function NavBar({ className }: NavBarProps) {
                         </Link>
                     )
                 })}
+
+                <button
+                    type="button"
+                    onClick={signOut}
+                    className="cursor-pointer text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 text-blue-400 hover:text-white hover:bg-white/10"
+                    title="Sign out"
+                >
+                    <span className="hidden md:inline">Sign out</span>
+                    <span className="md:hidden">
+                        <LogOut size={18} strokeWidth={2.5} />
+                    </span>
+                </button>
             </div>
         </div>
     )

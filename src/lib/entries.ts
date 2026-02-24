@@ -27,12 +27,21 @@ function rowToEntry(row: DbRow): Entry {
   }
 }
 
+async function getUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}
+
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
 export async function getEntries(): Promise<Entry[]> {
+  const userId = await getUserId()
+
   const { data, error } = await supabase
     .from('entries')
     .select('id, activity, start_time, end_time')
+    .eq('user_id', userId)
     .order('start_time', { ascending: true })
 
   if (error) {
@@ -44,11 +53,14 @@ export async function getEntries(): Promise<Entry[]> {
 }
 
 export async function addEntry(entry: Entry): Promise<void> {
+  const userId = await getUserId()
+
   const { error } = await supabase.from('entries').insert({
     id: entry.id,
     activity: entry.activity,
     start_time: entry.startTime,
     end_time: entry.endTime,
+    user_id: userId,
   })
 
   if (error) {
