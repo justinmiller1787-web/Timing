@@ -111,6 +111,12 @@ export function GlassDateTimePicker({
       const rect = triggerRef.current.getBoundingClientRect()
       setPopupPos({ top: rect.bottom + 8, left: rect.left })
       setTimeStep(1) // always start at hour selection when reopening
+      if (!selDate) {
+        const now = new Date()
+        setSelDate({ y: now.getFullYear(), mo: now.getMonth(), d: now.getDate() })
+        setViewYear(now.getFullYear())
+        setViewMonth(now.getMonth())
+      }
     }
     setOpen((o) => !o)
   }
