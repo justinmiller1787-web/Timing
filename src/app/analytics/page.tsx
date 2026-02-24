@@ -268,7 +268,10 @@ export default function AnalyticsPage() {
                   <span className="font-medium text-gray-200">{item.name}</span>
                 </div>
                 <span className="text-gray-400">
-                  {formatDuration(item.value)}{viewMode !== 'day' ? ` (avg ${formatDuration(item.avgPerDay)}/day)` : ` (${item.percentage}%)`}
+                  {viewMode === 'day'
+                    ? `${formatDuration(item.value)} (${item.percentage}%)`
+                    : `${formatDuration(item.avgPerDay)}/day (${item.percentage}%)`
+                  }
                 </span>
               </div>
             ))}
