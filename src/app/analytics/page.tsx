@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
       }
 
       const totals: Record<string, number> = {}
-      const daysWithEntries: Record<string, Set<string>> = {}
+      const allActiveDays = new Set<string>()
 
       filteredEntries.forEach((entry: Entry) => {
         const eStart = Math.max(new Date(entry.startTime).getTime(), rStart)
@@ -147,28 +147,25 @@ export default function AnalyticsPage() {
         const minutes = (eEnd - eStart) / (1000 * 60)
         if (minutes > 0) {
           totals[entry.activity] = (totals[entry.activity] ?? 0) + minutes
-          if (!daysWithEntries[entry.activity]) daysWithEntries[entry.activity] = new Set()
           let cursor = new Date(eStart)
           while (cursor.getTime() < eEnd) {
-            daysWithEntries[entry.activity].add(`${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`)
+            allActiveDays.add(`${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`)
             cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
           }
         }
       })
 
       const totalMinutes = Object.values(totals).reduce((sum, val) => sum + val, 0)
+      const globalActiveDays = Math.max(allActiveDays.size, 1)
 
       const chartData = Object.entries(totals)
-        .map(([name, value]) => {
-          const activeDays = daysWithEntries[name]?.size ?? 1
-          return {
-            name,
-            value: Math.round(value),
-            percentage: totalMinutes > 0 ? Math.round((value / totalMinutes) * 100) : 0,
-            activeDays,
-            avgPerDay: Math.round(value / activeDays),
-          }
-        })
+        .map(([name, value]) => ({
+          name,
+          value: Math.round(value),
+          percentage: totalMinutes > 0 ? Math.round((value / totalMinutes) * 100) : 0,
+          activeDays: globalActiveDays,
+          avgPerDay: Math.round(value / globalActiveDays),
+        }))
         .sort((a, b) => b.value - a.value)
 
       setData(chartData)
@@ -271,7 +268,7 @@ export default function AnalyticsPage() {
                   <span className="font-medium text-gray-200">{item.name}</span>
                 </div>
                 <span className="text-gray-400">
-                  {formatDuration(item.value)}{viewMode !== 'day' && ` (avg ${formatDuration(item.avgPerDay)}/day)`} ({item.percentage}%)
+                  {formatDuration(item.value)}{viewMode !== 'day' ? ` (avg ${formatDuration(item.avgPerDay)}/day)` : ` (${item.percentage}%)`}
                 </span>
               </div>
             ))}
