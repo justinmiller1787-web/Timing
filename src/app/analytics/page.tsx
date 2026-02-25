@@ -259,15 +259,15 @@ export default function AnalyticsPage() {
           </div>
           <div className="mt-6 space-y-2">
             {data.map((item) => (
-              <div key={item.name} className="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded">
-                <div className="flex items-center gap-2">
+              <div key={item.name} className="flex items-center justify-between gap-3 p-2 bg-white/5 border border-white/10 rounded">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="w-3 h-3 rounded-sm shrink-0"
                     style={{ backgroundColor: resolveColor(item.name, activityColors) }}
                   />
-                  <span className="font-medium text-gray-200">{item.name}</span>
+                  <span className="font-medium text-gray-200 truncate">{item.name}</span>
                 </div>
-                <span className="text-gray-400">
+                <span className="text-gray-400 text-sm shrink-0">
                   {viewMode === 'day'
                     ? `${formatDuration(item.value)} (${item.percentage}%)`
                     : `${formatDuration(item.avgPerDay)}/day (${item.percentage}%)`

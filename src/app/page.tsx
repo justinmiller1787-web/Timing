@@ -88,7 +88,7 @@ export default function LogPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto px-4 py-4 sm:p-6">
       <LiquidGlass className="max-w-xl mx-auto">
         <h1 className="text-3xl font-bold font-semibold mb-6 text-blue-600">Log Activity</h1>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -63,7 +63,8 @@ function ColorPicker({
       onClose()
     } else {
       const rect = swatchRef.current!.getBoundingClientRect()
-      setPos({ top: rect.bottom + 6, left: rect.left })
+      const left = Math.min(rect.left, window.innerWidth - 192)
+      setPos({ top: rect.bottom + 6, left: Math.max(8, left) })
       onOpen()
     }
   }

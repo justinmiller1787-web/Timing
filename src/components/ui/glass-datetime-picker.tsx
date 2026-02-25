@@ -76,6 +76,14 @@ export function GlassDateTimePicker({
 
   useEffect(() => { setMounted(true) }, [])
 
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 480)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   // Sync internal state when the value prop changes externally (e.g. reset after save)
   useEffect(() => {
     if (value) {
@@ -109,8 +117,14 @@ export function GlassDateTimePicker({
   const handleToggle = () => {
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
-      setPopupPos({ top: rect.bottom + 8, left: rect.left })
-      setTimeStep(1) // always start at hour selection when reopening
+      const vw = window.innerWidth
+      if (vw < 480) {
+        setPopupPos({ top: rect.bottom + 8, left: 0 })
+      } else {
+        const maxLeft = vw - 430
+        setPopupPos({ top: rect.bottom + 8, left: Math.max(8, Math.min(rect.left, maxLeft)) })
+      }
+      setTimeStep(1)
       if (!selDate) {
         const now = new Date()
         setSelDate({ y: now.getFullYear(), mo: now.getMonth(), d: now.getDate() })
@@ -168,8 +182,15 @@ export function GlassDateTimePicker({
   const popup = open ? (
     <div
       id="gdtp-popup"
-      style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, zIndex: 9999 }}
-      className="rounded-2xl border border-white/15 bg-slate-900/60 backdrop-blur-lg shadow-2xl p-4 flex gap-4"
+      style={{
+        position: 'fixed',
+        top: popupPos.top,
+        ...(isMobile
+          ? { left: '50%', transform: 'translateX(-50%)', maxWidth: 'calc(100vw - 16px)' }
+          : { left: popupPos.left }),
+        zIndex: 9999,
+      }}
+      className={`rounded-2xl border border-white/15 bg-slate-900/60 backdrop-blur-lg shadow-2xl p-4 flex gap-4 ${isMobile ? 'flex-col items-center' : ''}`}
     >
 
       {/* ════════════════ Calendar ════════════════ */}
@@ -226,7 +247,9 @@ export function GlassDateTimePicker({
       </div>
 
       {/* ════════════════ Divider ════════════════ */}
-      <div className="w-px bg-white/10 self-stretch" />
+      {isMobile
+        ? <div className="h-px bg-white/10 w-full" />
+        : <div className="w-px bg-white/10 self-stretch" />}
 
       {/* ════════════════ Time stepper ════════════════ */}
       {/*
@@ -234,7 +257,7 @@ export function GlassDateTimePicker({
         viewport. Translating the track by -(step-1)*PANEL_W reveals the
         correct panel with a smooth CSS slide.
       */}
-      <div style={{ width: PANEL_W }} className="overflow-hidden self-start">
+      <div style={{ width: PANEL_W }} className={`overflow-hidden ${isMobile ? 'self-center' : 'self-start'}`}>
         <div
           className="flex transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(${-(timeStep - 1) * PANEL_W}px)` }}
