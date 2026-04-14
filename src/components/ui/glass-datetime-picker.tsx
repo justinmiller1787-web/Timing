@@ -118,11 +118,24 @@ export function GlassDateTimePicker({
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
       const vw = window.innerWidth
+      const vh = window.innerHeight
+      const estimatedH = vw < 480 ? 420 : 280
+      const gap = 0
+
+      let top: number
+      if (rect.bottom + gap + estimatedH <= vh) {
+        top = rect.bottom + gap
+      } else if (rect.top - gap - estimatedH >= 0) {
+        top = rect.top - gap - estimatedH
+      } else {
+        top = Math.max(8, vh - estimatedH - 8)
+      }
+
       if (vw < 480) {
-        setPopupPos({ top: rect.bottom + 8, left: 0 })
+        setPopupPos({ top, left: 0 })
       } else {
         const maxLeft = vw - 430
-        setPopupPos({ top: rect.bottom + 8, left: Math.max(8, Math.min(rect.left, maxLeft)) })
+        setPopupPos({ top, left: Math.max(8, Math.min(rect.left, maxLeft)) })
       }
       setTimeStep(1)
       if (!selDate) {
@@ -189,6 +202,8 @@ export function GlassDateTimePicker({
           ? { left: '50%', transform: 'translateX(-50%)', maxWidth: 'calc(100vw - 16px)' }
           : { left: popupPos.left }),
         zIndex: 9999,
+        maxHeight: 'calc(100vh - 16px)',
+        overflowY: 'auto',
       }}
       className={`rounded-2xl border border-white/15 bg-slate-900/60 backdrop-blur-lg shadow-2xl p-4 flex gap-4 ${isMobile ? 'flex-col items-center' : ''}`}
     >
