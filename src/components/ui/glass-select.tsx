@@ -21,9 +21,12 @@ interface GlassSelectProps {
 
 const GlassSelect = ({ value, onChange, options, placeholder = "Select…", className }: GlassSelectProps) => {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const triggerRef = useRef<HTMLButtonElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   // Position the portal dropdown under the trigger button
   const updatePosition = () => {
@@ -145,7 +148,7 @@ const GlassSelect = ({ value, onChange, options, placeholder = "Select…", clas
       </button>
 
       {/* Portal: renders outside any stacking context */}
-      {typeof document !== "undefined" && createPortal(dropdown, document.body)}
+      {mounted && createPortal(dropdown, document.body)}
     </div>
   )
 }
