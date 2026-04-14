@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 import { Providers } from './providers'
-import { NavBar } from '@/components/ui/tubelight-navbar'
+import { MainShell } from '@/components/MainShell'
 import WarpBackground from '@/components/ui/wrap-shader'
 
 export const metadata: Metadata = {
@@ -17,11 +17,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="relative min-h-screen overflow-x-hidden">
+      <body className="relative min-h-screen overflow-x-hidden bg-[hsl(215,100%,10%)] text-slate-100 antialiased">
         <WarpBackground />
         <Providers>
-          <NavBar className="sticky top-6 flex justify-center z-50" />
-          {children}
+          <MainShell>{children}</MainShell>
         </Providers>
       </body>
     </html>

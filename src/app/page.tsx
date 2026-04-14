@@ -1,19 +1,32 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getActivities } from '@/lib/storage'
 import { addEntry } from '@/lib/entries'
 import { LiquidGlass } from '@/components/ui/liquid-glass'
 import { GlassSelect } from '@/components/ui/glass-select'
 import { GlassDateTimePicker } from '@/components/ui/glass-datetime-picker'
+import { getTasks } from '@/lib/tasks'
+import { setEntryTaskLink } from '@/lib/entry-task-links'
 
 const MANAGE_VALUE = '__manage__'
 
 export default function LogPage() {
+  return (
+    <Suspense>
+      <LogPageContent />
+    </Suspense>
+  )
+}
+
+function LogPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [activities, setActivities] = useState<string[]>([])
+  const [tasks, setTasks] = useState<{ id: string; title: string; completed: boolean }[]>([])
   const [activity, setActivity] = useState('')
+  const [selectedTaskId, setSelectedTaskId] = useState('')
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [endTime, setEndTime] = useState<Date | null>(null)
 
@@ -27,7 +40,25 @@ export default function LogPage() {
       a.localeCompare(b, undefined, { sensitivity: 'base' })
     )
     setActivities(sorted)
+    setTasks(getTasks().map((task) => ({ id: task.id, title: task.title, completed: task.completed })))
   }, [])
+
+  const lastAppliedParams = useRef('')
+
+  useEffect(() => {
+    const paramString = searchParams.toString()
+    if (paramString === lastAppliedParams.current) return
+    lastAppliedParams.current = paramString
+
+    const prefilledActivity = searchParams.get('activity')
+    const prefilledTaskId = searchParams.get('taskId')
+    if (prefilledActivity) {
+      setActivity(prefilledActivity)
+    }
+    if (prefilledTaskId) {
+      setSelectedTaskId(prefilledTaskId)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (!submitted) return
@@ -66,18 +97,25 @@ export default function LogPage() {
   }
 
   const handleSave = async () => {
-    if (!activity || !startTime || !endTime) {
+    if (!startTime || !endTime) {
       return
     }
 
+    const entryId = crypto.randomUUID()
+
     await addEntry({
-      id: crypto.randomUUID(),
-      activity,
+      id: entryId,
+      activity: activity || 'Other',
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
     })
 
+    if (selectedTaskId) {
+      setEntryTaskLink(entryId, selectedTaskId)
+    }
+
     setActivity('')
+    setSelectedTaskId('')
     setStartTime(null)
     setEndTime(null)
   }
@@ -105,6 +143,23 @@ export default function LogPage() {
                     : activities.map((act) => ({ value: act, label: act }))),
                   { value: "", label: "", separator: true },
                   { value: MANAGE_VALUE, label: "Manage activities" },
+                ]}
+              />
+            </LiquidGlass>
+          </div>
+          <div className="flex flex-col">
+            <label className="block text-sm font-semibold mb-2 text-blue-500">Task (optional)</label>
+            <LiquidGlass compact className="rounded-xl">
+              <GlassSelect
+                value={selectedTaskId}
+                onChange={setSelectedTaskId}
+                placeholder="No task selected"
+                options={[
+                  { value: '', label: 'No task selected' },
+                  ...tasks.map((task) => ({
+                    value: task.id,
+                    label: task.completed ? `${task.title} (completed)` : task.title,
+                  })),
                 ]}
               />
             </LiquidGlass>

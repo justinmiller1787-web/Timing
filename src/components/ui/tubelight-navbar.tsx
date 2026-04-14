@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { LucideIcon, Edit, Clock, BarChart2, LogOut } from "lucide-react"
+import { LucideIcon, Edit, Clock, BarChart2, CheckSquare, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth"
@@ -17,7 +17,8 @@ interface NavItem {
 const items: NavItem[] = [
     { name: 'Log', url: '/', icon: Edit },
     { name: 'Timeline', url: '/timeline', icon: Clock },
-    { name: 'Analytics', url: '/analytics', icon: BarChart2 }
+    { name: 'Analytics', url: '/analytics', icon: BarChart2 },
+    { name: 'Tasks', url: '/tasks', icon: CheckSquare }
 ]
 
 interface NavBarProps {
